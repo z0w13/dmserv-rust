@@ -9,6 +9,7 @@ use crate::types::UserData;
 
 mod modules;
 mod types;
+mod util;
 
 #[derive(Deserialize, Debug)]
 struct Config {

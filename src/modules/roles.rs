@@ -5,6 +5,7 @@ use pkrs::model::PkId;
 use poise::serenity_prelude::{self as serenity, PartialGuild};
 
 use crate::types::{Context, Error};
+use crate::util::{get_member_name, hex_to_color};
 
 #[derive(Debug, Hash, Eq, PartialEq)]
 struct MemberRole {
@@ -41,28 +42,19 @@ async fn get_desired_roles(
     let roles = pk
         .get_system_members(system)
         .await?
-        .iter()
+        .into_iter()
         .map(|m| MemberRole {
             id: None,
             name: format!(
                 "{} (Alter)",
-                m.display_name
-                    .clone()
-                    .unwrap_or(m.name.clone())
-                    .split(" (")
-                    .next()
+                get_member_name(&m)
+                    .split(" (") // Remove parenthesised pronouns ' (she/her)' and such
+                    .next() // get the first part of the split string
                     .unwrap()
             ),
-            color: match &m.color {
-                Some(color) => serenity::Colour(
-                    u32::from_str_radix(color.trim_start_matches("#"), 16)
-                        .unwrap_or(serenity::colours::roles::DEFAULT.0),
-                ),
-                None => serenity::colours::roles::DEFAULT,
-            }
-            .0,
+            color: hex_to_color(m.color).0,
         })
-        .map(|r| (r.name.clone(), r))
+        .map(|r| (r.name.to_owned(), r))
         .collect();
 
     Ok(roles)
