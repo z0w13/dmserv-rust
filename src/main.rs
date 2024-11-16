@@ -5,7 +5,7 @@ use poise::serenity_prelude::{self as serenity, CacheHttp, GuildId};
 use serde::Deserialize;
 use tokio::time::MissedTickBehavior;
 
-use crate::types::UserData;
+use crate::types::{Error, UserData};
 
 mod modules;
 mod types;
@@ -16,11 +16,15 @@ struct Config {
     token: String,
 }
 
+fn load_config() -> Result<Config, Error> {
+    let conf: Config = serde_envfile::prefixed("DMSERV_").from_file(&PathBuf::from("env"))?;
+
+    Ok(conf)
+}
+
 #[tokio::main]
 async fn main() {
-    let config: Config = serde_envfile::prefixed("DMSERV_")
-        .from_file(&PathBuf::from("env"))
-        .expect("Error parsing config");
+    let config = load_config().expect("error loading envfile");
 
     let intents = serenity::GatewayIntents::all();
     let options = poise::FrameworkOptions {
