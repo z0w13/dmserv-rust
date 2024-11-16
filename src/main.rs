@@ -22,6 +22,31 @@ fn load_config() -> Result<Config, Error> {
     Ok(conf)
 }
 
+fn start_long_running_tasks(ctx: serenity::Context) {
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(10));
+        interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
+        loop {
+            interval.tick().await;
+            let guild = ctx
+                .http()
+                .get_guild(GuildId::new(0000000000000000000 /* REDACTED */))
+                .await;
+
+            if let Err(e) = guild {
+                println!("Error fetching guild: {}", e);
+                continue;
+            }
+
+            if let Err(e) = update_fronter_channels(&ctx, guild.unwrap()).await {
+                println!("Error updating fronters: {}", e);
+            } else {
+                println!("Fronters updated");
+            }
+        }
+    });
+}
+
 #[tokio::main]
 async fn main() {
     let config = load_config().expect("error loading envfile");
@@ -41,32 +66,7 @@ async fn main() {
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
 
-                let ctx = ctx.to_owned();
-                tokio::spawn(async move {
-                    let mut interval = tokio::time::interval(Duration::from_secs(10));
-                    interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
-
-                    let ctx = ctx.to_owned();
-
-                    loop {
-                        interval.tick().await;
-                        let guild = ctx
-                            .http()
-                            .get_guild(GuildId::new(0000000000000000000 /* REDACTED */))
-                            .await;
-
-                        if let Err(e) = guild {
-                            println!("Error fetching guild: {}", e);
-                            continue;
-                        }
-
-                        if let Err(e) = update_fronter_channels(&ctx, guild.unwrap()).await {
-                            println!("Error updating fronters: {}", e);
-                        } else {
-                            println!("Fronters updated");
-                        }
-                    }
-                });
+                start_long_running_tasks(ctx.to_owned());
 
                 Ok(UserData {})
             })
