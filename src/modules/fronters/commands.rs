@@ -134,9 +134,16 @@ pub(crate) async fn update_fronter_channels(
             .get(fronter)
             .expect("couldn't get position for fronter, this should never happen!");
 
+        let permissions = vec![serenity::PermissionOverwrite {
+            deny: serenity::Permissions::CONNECT,
+            allow: serenity::Permissions::empty(),
+            kind: serenity::PermissionOverwriteType::Role(guild.id.everyone_role()),
+        }];
+
         let channel_create = serenity::CreateChannel::new(fronter)
             .position(*pos)
             .category(cat.id)
+            .permissions(permissions)
             .kind(serenity::ChannelType::Voice);
 
         let channel = match guild.create_channel(&ctx, channel_create).await {
@@ -218,8 +225,16 @@ async fn create_or_get_fronter_channel(
             return Err(err);
         }
 
-        // TODO: Channel permissions
-        let builder = serenity::CreateChannel::new(cat_name).kind(serenity::ChannelType::Category);
+        let permissions = vec![serenity::PermissionOverwrite {
+            deny: serenity::Permissions::VIEW_CHANNEL,
+            allow: serenity::Permissions::empty(),
+            kind: serenity::PermissionOverwriteType::Role(guild.id.everyone_role()),
+        }];
+
+        let builder = serenity::CreateChannel::new(cat_name)
+            .kind(serenity::ChannelType::Category)
+            .permissions(permissions);
+
         Ok(guild.create_channel(ctx.http(), builder).await?)
 
         // category doesn't exist create it
