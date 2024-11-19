@@ -220,8 +220,8 @@ async fn create_or_get_fronter_channel(
     let fronters_category = get_fronter_category(ctx, guild, Some(cat_name.to_owned())).await;
 
     if let Err(err) = fronters_category {
-        // other errors, return
-        if err.downcast_ref::<NoFronterCategoryError>().is_some() {
+        // return errors that aren't a missing fronter category
+        if err.downcast_ref::<NoFronterCategoryError>().is_none() {
             return Err(err);
         }
 
