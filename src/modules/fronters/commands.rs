@@ -22,7 +22,7 @@ impl fmt::Display for NoFronterCategoryError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "No fronter category for server '{}' ({})",
+            "no fronter category for server '{}' ({})",
             self.name, self.id
         )
     }
