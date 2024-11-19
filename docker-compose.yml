@@ -1,0 +1,13 @@
+services:
+  postgres:
+    image: "postgres:17.1"
+    env_file:
+      - path: .env
+        required: true
+    ports:
+      - "5432:5432/tcp"
+    volumes:
+      - "database:/var/lib/postgresql/data"
+
+volumes:
+  database:
