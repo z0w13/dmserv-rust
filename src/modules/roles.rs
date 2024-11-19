@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 
 use pkrs::model::PkId;
 use poise::serenity_prelude::{self as serenity, PartialGuild};
+use tracing::debug;
 
 use crate::types::{Context, Error};
 use crate::util::{get_member_name, hex_to_color};
@@ -124,23 +125,40 @@ pub(crate) async fn update_member_roles(ctx: Context<'_>) -> Result<(), Error> {
     let ops = get_ops(current_role_map, desired_role_map);
 
     // TODO: actually handle errors
+    // TODO: set mention permissions?
     for op in ops.iter() {
         match op {
             ChangeOperation::Update { id, name, color } => {
                 guild
                     .edit_role(&ctx, id, serenity::EditRole::new().colour(*color))
                     .await?;
-                println!("Updated: {}", name)
+
+                debug!(
+                    guild_id = guild.id.get(),
+                    guild_name = guild.name,
+                    "updated role: {}",
+                    name,
+                )
             }
             ChangeOperation::Create { name, color } => {
                 guild
                     .create_role(&ctx, serenity::EditRole::new().name(name).colour(*color))
                     .await?;
-                println!("Created: {}", name)
+                debug!(
+                    guild_id = guild.id.get(),
+                    guild_name = guild.name,
+                    "created role: {}",
+                    name
+                )
             }
             ChangeOperation::Delete { id, name } => {
                 guild.delete_role(&ctx, id).await?;
-                println!("Deleted: {}", name)
+                debug!(
+                    guild_id = guild.id.get(),
+                    guild_name = guild.name,
+                    "deleted_role: {}",
+                    name
+                )
             }
         };
     }
@@ -155,7 +173,7 @@ pub(crate) async fn update_member_roles(ctx: Context<'_>) -> Result<(), Error> {
             });
 
     ctx.say(format!(
-        "Roles updated, {} created, {} deleted, {} updated",
+        "roles updated, {} created, {} deleted, {} updated",
         created, deleted, updated
     ))
     .await?;

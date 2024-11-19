@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use poise::serenity_prelude::{self as serenity};
+use tracing::{error, info};
 
 use crate::modules::fronters;
 use crate::types::{Data, Error};
@@ -11,8 +12,8 @@ pub(crate) async fn update_fronters(ctx: &serenity::Context, data: Arc<Data>) ->
     let fronter_cats = fronters::db::get_fronter_categories(&data.db).await?;
 
     for cat in fronter_cats {
-        if let Err(err) = update_fronters_for_guild(ctx, cat).await {
-            println!("{}", err);
+        if let Err(err) = update_fronters_for_guild(ctx, &cat).await {
+            error!(guild_id = cat.guild_id, category_id = cat.category_id, err);
         }
     }
 
@@ -21,7 +22,7 @@ pub(crate) async fn update_fronters(ctx: &serenity::Context, data: Arc<Data>) ->
 
 async fn update_fronters_for_guild(
     ctx: &serenity::Context,
-    cat: ModPkFrontersRow,
+    cat: &ModPkFrontersRow,
 ) -> Result<(), Error> {
     let guild = ctx.http.get_guild(cat.guild_id.into()).await?;
 
@@ -50,7 +51,11 @@ async fn update_fronters_for_guild(
             )
         })?;
 
-    println!("fronters updated '{}' ({})", guild.name, guild.id);
+    info!(
+        guild.id = guild.id.get(),
+        guild.name = guild.name,
+        "fronters updated"
+    );
 
     Ok(())
 }

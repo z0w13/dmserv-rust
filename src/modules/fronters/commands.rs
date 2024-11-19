@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 use pkrs::model::PkId;
 use poise::serenity_prelude::{self as serenity, CacheHttp};
 use serde_either::StringOrStruct;
+use tracing::error;
 
 use crate::modules::fronters::db;
 use crate::types::{Context, Error};
@@ -96,7 +97,7 @@ pub(crate) async fn update_fronter_channels(
     for fronter in delete_fronters {
         let channel = fronter_channel_map.get(fronter).unwrap();
         if let Err(e) = channel.delete(&ctx).await {
-            println!("error deleting channel '{}': {}", fronter, e);
+            error!("error deleting channel '{}': {}", fronter, e);
             continue;
         }
 
@@ -123,7 +124,7 @@ pub(crate) async fn update_fronter_channels(
         let channel = match guild.create_channel(&ctx, channel_create).await {
             Ok(chan) => chan,
             Err(e) => {
-                println!("error creating fronter channel '{}': {}", fronter, e);
+                error!("error creating fronter channel '{}': {}", fronter, e);
                 continue;
             }
         };
@@ -144,7 +145,7 @@ pub(crate) async fn update_fronter_channels(
             .edit(&ctx, serenity::EditChannel::new().position(*position))
             .await
         {
-            println!("error moving channel '{}': {}", name, e);
+            error!("error moving channel '{}': {}", name, e);
             continue;
         }
     }

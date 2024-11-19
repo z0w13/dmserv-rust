@@ -1,8 +1,12 @@
 use std::{sync::Arc, time::Duration};
 
 use poise::serenity_prelude::{self as serenity};
-use sqlx::postgres::PgPoolOptions;
+use sqlx::{
+    postgres::{PgConnectOptions, PgPoolOptions},
+    ConnectOptions,
+};
 use tokio::time::MissedTickBehavior;
+use tracing::{debug, error, log::LevelFilter};
 
 use crate::types::Data;
 
@@ -19,10 +23,10 @@ fn start_long_running_tasks(ctx: serenity::Context, data: Arc<Data>) {
         loop {
             interval.tick().await;
 
-            println!("long_running_tasks::tick()");
+            debug!("long_running_tasks::tick()");
 
             if let Err(err) = modules::fronters::tasks::update_fronters(&ctx, data.clone()).await {
-                println!("error running update_fronters(): {}", err);
+                error!("error running update_fronters(): {}", err);
             }
         }
     });
@@ -30,10 +34,20 @@ fn start_long_running_tasks(ctx: serenity::Context, data: Arc<Data>) {
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::fmt::init();
+
     let config = config::load_config().expect("error loading envfile");
+    let connect_opts = config
+        .db
+        .url
+        .parse::<PgConnectOptions>()
+        .expect(&format!("couldn't parse db url: {}", config.db.url))
+        .log_statements(LevelFilter::Trace)
+        .log_slow_statements(LevelFilter::Warn, Duration::from_secs(5));
+
     let db = PgPoolOptions::new()
         .max_connections(5)
-        .connect(config.db.url.as_str())
+        .connect_with(connect_opts)
         .await
         .expect("error connecting to db");
 
@@ -41,12 +55,12 @@ async fn main() {
     let options = poise::FrameworkOptions {
         pre_command: |ctx| {
             Box::pin(async move {
-                println!("executing command {}...", ctx.invoked_command_name());
+                debug!("executing command /{}...", ctx.invoked_command_name());
             })
         },
         post_command: |ctx| {
             Box::pin(async move {
-                println!("finished executing command {}", ctx.invoked_command_name());
+                debug!("finished executing command /{}", ctx.invoked_command_name());
             })
         },
         commands: vec![
