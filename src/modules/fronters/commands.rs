@@ -1,6 +1,4 @@
 use std::collections::{HashMap, HashSet};
-use std::error;
-use std::fmt;
 
 use pkrs::model::PkId;
 use poise::serenity_prelude::{self as serenity, CacheHttp};
@@ -9,24 +7,6 @@ use serde_either::StringOrStruct;
 use crate::modules::fronters::db;
 use crate::types::{Context, Error};
 use crate::util::get_member_name;
-
-#[derive(Debug, Clone)]
-struct NoFronterCategoryError {
-    id: String,
-    name: String,
-}
-
-impl error::Error for NoFronterCategoryError {}
-
-impl fmt::Display for NoFronterCategoryError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "no fronter category for server '{}' ({})",
-            self.name, self.id
-        )
-    }
-}
 
 async fn get_desired_fronters(system: &PkId, token: String) -> Result<HashSet<String>, Error> {
     let pk = pkrs::client::PkClient {
@@ -70,7 +50,7 @@ async fn get_fronter_category(
     ctx: &serenity::Context,
     guild: &serenity::PartialGuild,
     opt_cat_name: Option<String>,
-) -> Result<serenity::GuildChannel, Error> {
+) -> Result<Option<serenity::GuildChannel>, Error> {
     let cat_name = opt_cat_name
         .unwrap_or("current fronters".into())
         .to_lowercase();
@@ -81,14 +61,8 @@ async fn get_fronter_category(
         .into_values()
         .find(|c| c.name.to_lowercase() == cat_name && c.kind == serenity::ChannelType::Category)
     {
-        None => {
-            return Err(NoFronterCategoryError {
-                id: guild.id.to_string(),
-                name: guild.name.to_owned(),
-            }
-            .into());
-        }
-        Some(cat) => Ok(cat),
+        None => Ok(None),
+        Some(cat) => Ok(Some(cat)),
     }
 }
 
@@ -197,16 +171,7 @@ pub(crate) async fn update_fronters(ctx: Context<'_>) -> Result<(), Error> {
         .guild()
         .ok_or(format!("channel {} isn't a guild channel", cat_id))?;
 
-    match update_fronter_channels(ctx.serenity_context(), guild, cat).await {
-        // TODO: Figure out if there's a nicer way to match errors like this
-        Err(e) => match e.downcast_ref::<NoFronterCategoryError>() {
-            Some(_) => {
-                return Err("no fronters category in the server, please run /setup-fronters".into())
-            }
-            None => return Err(e),
-        },
-        Ok(_) => (),
-    };
+    update_fronter_channels(ctx.serenity_context(), guild, cat).await?;
 
     ctx.reply("fronter list updated!").await?;
     Ok(())
@@ -217,14 +182,9 @@ async fn create_or_get_fronter_channel(
     guild: &serenity::PartialGuild,
     cat_name: String,
 ) -> Result<serenity::GuildChannel, Error> {
-    let fronters_category = get_fronter_category(ctx, guild, Some(cat_name.to_owned())).await;
+    let fronters_category = get_fronter_category(ctx, guild, Some(cat_name.to_owned())).await?;
 
-    if let Err(err) = fronters_category {
-        // return errors that aren't a missing fronter category
-        if err.downcast_ref::<NoFronterCategoryError>().is_none() {
-            return Err(err);
-        }
-
+    if fronters_category.is_none() {
         let permissions = vec![serenity::PermissionOverwrite {
             deny: serenity::Permissions::VIEW_CHANNEL,
             allow: serenity::Permissions::empty(),
