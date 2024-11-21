@@ -51,6 +51,11 @@ async fn main() {
         .await
         .expect("error connecting to db");
 
+    sqlx::migrate!()
+        .run(&db)
+        .await
+        .expect("error running migrations");
+
     let intents = serenity::GatewayIntents::all();
     let options = poise::FrameworkOptions {
         pre_command: |ctx| {
