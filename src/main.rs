@@ -17,16 +17,17 @@ mod util;
 
 fn start_long_running_tasks(ctx: serenity::Context, data: Arc<Data>) {
     tokio::spawn(async move {
-        let mut interval = tokio::time::interval(Duration::from_secs(10));
+        let mut update_fronters_interval = tokio::time::interval(Duration::from_secs(60));
+        update_fronters_interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
 
-        interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
         loop {
-            interval.tick().await;
-
-            debug!("long_running_tasks::tick()");
-
-            if let Err(err) = modules::fronters::tasks::update_fronters(&ctx, data.clone()).await {
-                error!("error running update_fronters(): {}", err);
+            tokio::select! {
+                _ = update_fronters_interval.tick() => {
+                    debug!("long_running_tasks::update_fronters_interval.tick()");
+                    if let Err(err) = modules::fronters::tasks::update_fronters(&ctx, data.clone()).await {
+                        error!("error running update_fronters(): {}", err);
+                    }
+                }
             }
         }
     });
