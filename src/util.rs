@@ -12,8 +12,8 @@ pub(crate) fn hex_to_color(hex: Option<String>) -> serenity::Colour {
 }
 
 pub(crate) fn get_member_name(member: &Member) -> String {
-    return member
+    member
         .display_name
         .to_owned()
-        .unwrap_or(member.name.to_owned());
+        .unwrap_or(member.name.to_owned())
 }
