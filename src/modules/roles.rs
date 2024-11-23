@@ -6,6 +6,7 @@ use pkrs::model::PkId;
 use poise::serenity_prelude::{self as serenity, PartialGuild};
 use tracing::debug;
 
+use super::pk::db::get_guild_settings_for_id;
 use crate::types::{Context, Data, Error};
 use crate::util::{get_member_name, hex_to_color};
 
@@ -120,9 +121,16 @@ pub(crate) async fn update_member_roles(ctx: Context<'_>) -> Result<(), Error> {
     ctx.defer_ephemeral().await?; // delay responding and make reply ephemeral
 
     let guild = ctx.partial_guild().await.unwrap();
+    let gs = get_guild_settings_for_id(&ctx.data().db, guild.id.get())
+        .await?
+        .ok_or("PluralKit module not set-up, please run /setup-pk")?;
 
     let current_role_map = get_current_roles(guild.clone());
-    let desired_role_map = get_desired_roles(&PkId("***REMOVED***".into()), "".into()).await?;
+    let desired_role_map = get_desired_roles(
+        &PkId(gs.system_id.clone().into()),
+        gs.token.clone().unwrap_or("".into()).into(),
+    )
+    .await?;
     let ops = get_ops(current_role_map, desired_role_map);
 
     // TODO: actually handle errors
@@ -173,7 +181,7 @@ pub(crate) async fn update_member_roles(ctx: Context<'_>) -> Result<(), Error> {
                 ChangeOperation::Update { .. } => (created, deleted, updated + 1),
             });
 
-    ctx.say(format!(
+    ctx.reply(format!(
         "roles updated, {} created, {} deleted, {} updated",
         created, deleted, updated
     ))
