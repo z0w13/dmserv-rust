@@ -20,7 +20,7 @@ pub(crate) async fn update_fronters(ctx: &serenity::Context, data: Arc<Data>) ->
             .find(|gs| u64::try_from(gs.guild_id).unwrap() == cat.guild_id);
 
         if let Some(gs) = cur_guild_settings {
-            if let Err(err) = update_fronters_for_guild(ctx, &gs, &cat).await {
+            if let Err(err) = update_fronters_for_guild(ctx, gs, &cat).await {
                 error!(guild_id = cat.guild_id, category_id = cat.category_id, err);
             }
         } else {
@@ -57,7 +57,7 @@ async fn update_fronters_for_guild(
             cat.category_id, guild.name, guild.id
         ))?;
 
-    fronters::commands::update_fronter_channels(&ctx, guild.clone(), gs, cat)
+    fronters::commands::update_fronter_channels(ctx, guild.clone(), gs, cat)
         .await
         .map_err(|err| {
             format!(

@@ -40,12 +40,12 @@ pub(crate) async fn setup_pk(
     .await?;
 
     let pk = pkrs::client::PkClient {
-        token: token.unwrap_or("".into()).into(),
+        token: token.unwrap_or("".to_owned()),
         ..Default::default()
     };
 
     // TODO: fix pkrs to actually handle 404s correctly
-    let system = match pk.get_system(&PkId(system_id.clone().into())).await {
+    let system = match pk.get_system(&PkId(system_id.clone())).await {
         Ok(system) => system,
         Err(err) => {
             ctx.reply(format!(

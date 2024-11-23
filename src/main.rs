@@ -25,7 +25,7 @@ async fn main() {
         .db
         .url
         .parse::<PgConnectOptions>()
-        .expect(&format!("couldn't parse db url: {}", config.db.url))
+        .unwrap_or_else(|_| panic!("couldn't parse db url: {}", config.db.url))
         .log_statements(LevelFilter::Trace)
         .log_slow_statements(LevelFilter::Warn, Duration::from_secs(5));
 

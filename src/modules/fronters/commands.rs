@@ -12,7 +12,7 @@ use crate::util::get_member_name;
 
 async fn get_desired_fronters(system: &PkId, token: String) -> Result<HashSet<String>, Error> {
     let pk = pkrs::client::PkClient {
-        token: token.into(),
+        token,
         ..Default::default()
     };
 
@@ -78,8 +78,8 @@ pub(crate) async fn update_fronter_channels(
 ) -> Result<(), Error> {
     let fronter_channels = get_fronter_channels(ctx, guild.id, cat.id).await?;
     let desired_fronters = get_desired_fronters(
-        &PkId(gs.system_id.clone().into()),
-        gs.token.clone().unwrap_or("".into()).into(),
+        &PkId(gs.system_id.clone()),
+        gs.token.clone().unwrap_or("".to_owned()),
     )
     .await?;
     let current_fronters: HashSet<String> =
@@ -196,25 +196,23 @@ async fn create_or_get_fronter_channel(
     guild: &serenity::PartialGuild,
     cat_name: String,
 ) -> Result<serenity::GuildChannel, Error> {
-    let fronters_category = get_fronter_category(ctx, guild, Some(cat_name.to_owned())).await?;
-
-    if fronters_category.is_none() {
-        let permissions = vec![serenity::PermissionOverwrite {
-            deny: serenity::Permissions::VIEW_CHANNEL,
-            allow: serenity::Permissions::empty(),
-            kind: serenity::PermissionOverwriteType::Role(guild.id.everyone_role()),
-        }];
-
-        let builder = serenity::CreateChannel::new(cat_name)
-            .kind(serenity::ChannelType::Category)
-            .permissions(permissions);
-
-        Ok(guild.create_channel(ctx.http(), builder).await?)
-
-        // category doesn't exist create it
-    } else {
-        return Ok(fronters_category.unwrap());
+    if let Some(fronters_category) =
+        get_fronter_category(ctx, guild, Some(cat_name.to_owned())).await?
+    {
+        return Ok(fronters_category);
     }
+
+    let permissions = vec![serenity::PermissionOverwrite {
+        deny: serenity::Permissions::VIEW_CHANNEL,
+        allow: serenity::Permissions::empty(),
+        kind: serenity::PermissionOverwriteType::Role(guild.id.everyone_role()),
+    }];
+
+    let builder = serenity::CreateChannel::new(cat_name)
+        .kind(serenity::ChannelType::Category)
+        .permissions(permissions);
+
+    Ok(guild.create_channel(ctx.http(), builder).await?)
 }
 
 #[poise::command(slash_command, guild_only = true, rename = "setup-fronters")]

@@ -38,7 +38,7 @@ async fn get_desired_roles(
     token: String,
 ) -> Result<HashMap<String, MemberRole>, Error> {
     let pk = pkrs::client::PkClient {
-        token: token.into(),
+        token,
         ..Default::default()
     };
 
@@ -126,11 +126,8 @@ pub(crate) async fn update_member_roles(ctx: Context<'_>) -> Result<(), Error> {
         .ok_or("PluralKit module not set-up, please run /setup-pk")?;
 
     let current_role_map = get_current_roles(guild.clone());
-    let desired_role_map = get_desired_roles(
-        &PkId(gs.system_id.clone().into()),
-        gs.token.clone().unwrap_or("".into()).into(),
-    )
-    .await?;
+    let desired_role_map =
+        get_desired_roles(&PkId(gs.system_id), gs.token.clone().unwrap_or("".to_owned())).await?;
     let ops = get_ops(current_role_map, desired_role_map);
 
     // TODO: actually handle errors
