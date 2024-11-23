@@ -5,33 +5,16 @@ use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions},
     ConnectOptions,
 };
-use tokio::time::MissedTickBehavior;
-use tracing::{debug, error, log::LevelFilter};
+use tracing::{debug, log::LevelFilter};
 
+use crate::modules::fronters;
 use crate::types::Data;
 
 mod config;
 mod modules;
+mod task;
 mod types;
 mod util;
-
-fn start_long_running_tasks(ctx: serenity::Context, data: Arc<Data>) {
-    tokio::spawn(async move {
-        let mut update_fronters_interval = tokio::time::interval(Duration::from_secs(60));
-        update_fronters_interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
-
-        loop {
-            tokio::select! {
-                _ = update_fronters_interval.tick() => {
-                    debug!("long_running_tasks::update_fronters_interval.tick()");
-                    if let Err(err) = modules::fronters::tasks::update_fronters(&ctx, data.clone()).await {
-                        error!("error running update_fronters(): {}", err);
-                    }
-                }
-            }
-        }
-    });
-}
 
 #[tokio::main]
 async fn main() {
@@ -69,11 +52,12 @@ async fn main() {
                 debug!("finished executing command /{}", ctx.invoked_command_name());
             })
         },
-        commands: vec![
-            modules::roles::update_member_roles(),
-            modules::fronters::commands::update_fronters(),
-            modules::fronters::commands::setup_fronters(),
-        ],
+
+        // registere module commands
+        commands: vec![modules::fronters::commands(), modules::roles::commands()]
+            .into_iter()
+            .flatten()
+            .collect(),
         ..Default::default()
     };
 
@@ -85,7 +69,8 @@ async fn main() {
 
                 let data = Arc::new(Data::new(db));
 
-                start_long_running_tasks(ctx.to_owned(), data.clone());
+                // register module tasks
+                fronters::start_tasks(ctx.to_owned(), data.clone());
 
                 Ok(data.clone())
             })

@@ -11,5 +11,6 @@ serde-envfile = "0.1.0"
 serde_either = "0.2.1"
 sqlx = { version = "0.8.2", features = ["runtime-tokio", "json", "chrono", "migrate", "postgres", "macros", "derive"] }
 tokio = { version = "1.41.1", features = ["rt-multi-thread", "macros"] }
+tokio_schedule = "0.3.2"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
