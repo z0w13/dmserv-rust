@@ -6,6 +6,7 @@ use serde_either::StringOrStruct;
 use tracing::error;
 
 use crate::modules::fronters::db;
+use crate::modules::pk::db::{get_guild_settings_for_id, ModPkGuildRow};
 use crate::types::{Context, Error};
 use crate::util::get_member_name;
 
@@ -72,10 +73,15 @@ async fn get_fronter_category(
 pub(crate) async fn update_fronter_channels(
     ctx: &serenity::Context,
     guild: serenity::PartialGuild,
+    gs: &ModPkGuildRow,
     cat: serenity::GuildChannel,
 ) -> Result<(), Error> {
     let fronter_channels = get_fronter_channels(ctx, guild.id, cat.id).await?;
-    let desired_fronters = get_desired_fronters(&PkId("***REMOVED***".into()), "".into()).await?;
+    let desired_fronters = get_desired_fronters(
+        &PkId(gs.system_id.clone().into()),
+        gs.token.clone().unwrap_or("".into()).into(),
+    )
+    .await?;
     let current_fronters: HashSet<String> =
         fronter_channels.iter().map(|c| c.name.to_owned()).collect();
 
@@ -161,9 +167,16 @@ pub(crate) async fn update_fronters(ctx: Context<'_>) -> Result<(), Error> {
         .await
         .ok_or("couldn't get guild from context")?;
 
-    let cat_id = db::get_fronter_category(&ctx.data().db, guild.id.get())
+    let guild_id = guild.id.get();
+    let db = &ctx.data().db;
+
+    let cat_id = db::get_fronter_category(db, guild_id)
         .await?
         .ok_or("fronter category not set-up, please run /setup-fronters")?;
+
+    let gs = get_guild_settings_for_id(db, guild_id)
+        .await?
+        .ok_or("PluralKit module not set-up, please run /setup-pk")?;
 
     let cat = ctx
         .http()
@@ -172,7 +185,7 @@ pub(crate) async fn update_fronters(ctx: Context<'_>) -> Result<(), Error> {
         .guild()
         .ok_or(format!("channel {} isn't a guild channel", cat_id))?;
 
-    update_fronter_channels(ctx.serenity_context(), guild, cat).await?;
+    update_fronter_channels(ctx.serenity_context(), guild, &gs, cat).await?;
 
     ctx.reply("fronter list updated!").await?;
     Ok(())
