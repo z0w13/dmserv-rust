@@ -54,10 +54,14 @@ async fn main() {
         },
 
         // registere module commands
-        commands: vec![modules::fronters::commands(), modules::roles::commands()]
-            .into_iter()
-            .flatten()
-            .collect(),
+        commands: vec![
+            modules::fronters::commands(),
+            modules::roles::commands(),
+            modules::pk::commands(),
+        ]
+        .into_iter()
+        .flatten()
+        .collect(),
         ..Default::default()
     };
 
