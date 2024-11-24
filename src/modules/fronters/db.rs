@@ -55,3 +55,10 @@ pub(crate) async fn save_fronter_category(
 
     Ok(())
 }
+pub(crate) async fn get_system_count(db: &sqlx::PgPool) -> Result<usize, Error> {
+    let system_count = sqlx::query_scalar!("SELECT COUNT(DISTINCT system_id) FROM mod_pk_fronters INNER JOIN mod_pk_guilds ON mod_pk_fronters.guild_id = mod_pk_guilds.guild_id")
+        .fetch_one(db)
+        .await?;
+
+    Ok(system_count.unwrap_or(0) as usize)
+}

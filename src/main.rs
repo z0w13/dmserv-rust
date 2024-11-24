@@ -5,9 +5,8 @@ use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions},
     ConnectOptions,
 };
-use tracing::{debug, log::LevelFilter};
+use tracing::{debug, info, log::LevelFilter};
 
-use crate::modules::fronters;
 use crate::types::Data;
 
 mod config;
@@ -19,6 +18,19 @@ mod util;
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
+
+    info!("Starting DMServ ...");
+    info!(" [-] Version:  {}", env!("CARGO_PKG_VERSION"));
+    info!(
+        " [-] Commit:   {}{}",
+        env!("VERGEN_GIT_SHA"),
+        match env!("VERGEN_GIT_DIRTY") {
+            "true" => "-dirty",
+            _ => "",
+        }
+    );
+    info!(" [-] Branch:   {}", env!("VERGEN_GIT_BRANCH"));
+    info!(" [-] Built At: {}", env!("VERGEN_BUILD_TIMESTAMP"));
 
     let config = config::load_config().expect("error loading envfile");
     let connect_opts = config
@@ -58,6 +70,7 @@ async fn main() {
             modules::fronters::commands(),
             modules::roles::commands(),
             modules::pk::commands(),
+            modules::stats::commands(),
         ]
         .into_iter()
         .flatten()
@@ -74,7 +87,8 @@ async fn main() {
                 let data = Arc::new(Data::new(db));
 
                 // register module tasks
-                fronters::start_tasks(ctx.to_owned(), data.clone());
+                modules::stats::start_tasks(ctx.to_owned(), data.clone());
+                modules::fronters::start_tasks(ctx.to_owned(), data.clone());
 
                 Ok(data.clone())
             })
