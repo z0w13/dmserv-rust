@@ -116,7 +116,12 @@ fn get_ops(
         .collect()
 }
 
-#[poise::command(slash_command, guild_only = true, rename = "update-member-roles")]
+#[poise::command(
+    slash_command,
+    guild_only = true,
+    rename = "update-member-roles",
+    default_member_permissions = "MANAGE_GUILD"
+)]
 pub(crate) async fn update_member_roles(ctx: Context<'_>) -> Result<(), Error> {
     ctx.defer_ephemeral().await?; // delay responding and make reply ephemeral
 

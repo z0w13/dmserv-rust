@@ -6,7 +6,12 @@ use crate::types::{Context, Error};
 
 // TODO: command to see current settings
 
-#[poise::command(slash_command, guild_only = true, rename = "setup-pk")]
+#[poise::command(
+    slash_command,
+    guild_only = true,
+    rename = "setup-pk",
+    default_member_permissions = "MANAGE_GUILD"
+)]
 pub(crate) async fn setup_pk(
     ctx: Context<'_>,
     #[description = "system id"] system_id: String,

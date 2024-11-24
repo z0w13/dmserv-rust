@@ -159,7 +159,12 @@ pub(crate) async fn update_fronter_channels(
     Ok(())
 }
 
-#[poise::command(slash_command, guild_only = true, rename = "update-fronters")]
+#[poise::command(
+    slash_command,
+    guild_only = true,
+    rename = "update-fronters",
+    default_member_permissions = "MANAGE_GUILD"
+)]
 pub(crate) async fn update_fronters(ctx: Context<'_>) -> Result<(), Error> {
     ctx.defer_ephemeral().await?;
     let guild = ctx
@@ -215,7 +220,12 @@ async fn create_or_get_fronter_channel(
     Ok(guild.create_channel(ctx.http(), builder).await?)
 }
 
-#[poise::command(slash_command, guild_only = true, rename = "setup-fronters")]
+#[poise::command(
+    slash_command,
+    guild_only = true,
+    rename = "setup-fronters",
+    default_member_permissions = "MANAGE_GUILD"
+)]
 pub(crate) async fn setup_fronters(
     ctx: Context<'_>,
     #[description = "Name of the fronters category"] name: String,
