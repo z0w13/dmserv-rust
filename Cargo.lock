@@ -510,6 +510,7 @@ dependencies = [
 name = "dmserv-rust"
 version = "0.2.0"
 dependencies = [
+ "dotenvy",
  "pkrs",
  "poise",
  "serde",

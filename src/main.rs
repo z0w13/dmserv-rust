@@ -17,6 +17,9 @@ mod util;
 
 #[tokio::main]
 async fn main() {
+    // load env vars
+    dotenvy::dotenv().expect("error loading env vars");
+
     tracing_subscriber::fmt::init();
 
     info!("Starting DMServ ...");
