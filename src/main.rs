@@ -20,6 +20,7 @@ async fn main() {
     // load env vars
     dotenvy::dotenv().expect("error loading env vars");
 
+    // set-up logging
     tracing_subscriber::fmt::init();
 
     info!("Starting DMServ ...");
@@ -35,7 +36,7 @@ async fn main() {
     info!(" [-] Branch:   {}", env!("VERGEN_GIT_BRANCH"));
     info!(" [-] Built At: {}", env!("VERGEN_BUILD_TIMESTAMP"));
 
-    let config = config::load_config().expect("error loading envfile");
+    let config = config::load_config().expect("error loading config from env");
     let connect_opts = config
         .db
         .url
@@ -44,12 +45,14 @@ async fn main() {
         .log_statements(LevelFilter::Trace)
         .log_slow_statements(LevelFilter::Warn, Duration::from_secs(5));
 
+    info!("connecting to database...");
     let db = PgPoolOptions::new()
         .max_connections(5)
         .connect_with(connect_opts)
         .await
         .expect("error connecting to db");
 
+    info!("running migrations...");
     sqlx::migrate!()
         .run(&db)
         .await
