@@ -10,6 +10,7 @@ use tracing::{debug, info, log::LevelFilter};
 use crate::types::Data;
 
 mod config;
+mod events;
 mod modules;
 mod task;
 mod types;
@@ -69,6 +70,9 @@ async fn main() {
             Box::pin(async move {
                 debug!("finished executing command /{}", ctx.invoked_command_name());
             })
+        },
+        event_handler: |ctx, evt, framework, data| {
+            Box::pin(events::handler(ctx, evt, framework, data))
         },
 
         // registere module commands
