@@ -4,11 +4,12 @@ use std::sync::{
     Mutex,
 };
 
+use num_format::{Locale, ToFormattedString};
 use poise::serenity_prelude::{self as serenity};
 use sqlx::types::chrono;
 use tokio::spawn;
 use tokio_schedule::{every, Job};
-use tracing::error;
+use tracing::{debug, error};
 
 use crate::modules::fronters;
 use crate::types::{Context, Data, Error};
@@ -88,6 +89,17 @@ pub(crate) async fn stats(ctx: Context<'_>) -> Result<(), Error> {
     let msg = ctx.reply("...").await?;
     let time_after = chrono::Utc::now().timestamp_millis();
     let api_latency = time_after - time_before;
+    let (shard_id, shard_latency) = {
+        // Shard 0 is the shard used for DMs
+        let shard_id = ctx.guild_id().map(|g| g.shard_id(ctx.cache())).unwrap_or(0);
+        let shard_runners = ctx.framework().shard_manager.runners.lock().await;
+        let opt_shard = shard_runners.get(&serenity::ShardId(shard_id)).clone();
+
+        (
+            shard_id,
+            opt_shard.and_then(|s| s.latency).map(|l| l.as_millis()),
+        )
+    };
 
     let fronter_systems = fronters::db::get_system_count(&ctx.data().db).await?;
 
@@ -111,7 +123,19 @@ pub(crate) async fn stats(ctx: Context<'_>) -> Result<(), Error> {
             true,
         )
         .field("Servers", format!("{}", ctx.cache().guilds().len()), true)
-        .field("Latency", format!("Discord: {} ms", api_latency), true)
+        .field("Current shard", format!("Shard #{}", shard_id), true)
+        .field(
+            "Latency",
+            format!(
+                "API: {} ms, Shard: {}",
+                api_latency,
+                shard_latency.map_or("N/A".into(), |f| format!(
+                    "{} ms",
+                    f.to_formatted_string(&Locale::en)
+                ))
+            ),
+            true,
+        )
         .field("CPU Usage", format!("{:.2} %", stats.get_cpu_usage()), true)
         .field("Memory Usage", format!("{:.02} MiB", mem_usage_mb), true)
         .field(
