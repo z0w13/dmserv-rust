@@ -90,11 +90,13 @@ async fn main() {
 
     let framework = poise::Framework::builder()
         .options(options)
-        .setup(|ctx, _ready, framework| {
+        // ran on initial connection
+        .setup(|ctx, ready, framework| {
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
-
-                let data = Arc::new(Data::new(db));
+                // TODO: figure out if shard total can change during runtime,
+                //       if so figure out how to handle it
+                let data = Arc::new(Data::new(db, ready.shard.unwrap().total));
 
                 // register module tasks
                 modules::stats::start_tasks(ctx.to_owned(), data.clone());

@@ -17,3 +17,24 @@ pub(crate) fn get_member_name(member: &Member) -> String {
         .to_owned()
         .unwrap_or(member.name.to_owned())
 }
+
+pub(crate) fn format_significant_duration(total_secs: u64) -> String {
+    const SECS_IN_MIN: u64 = 60;
+    const SECS_IN_HOUR: u64 = 60 * 60;
+    const SECS_IN_DAY: u64 = 24 * 60 * 60;
+
+    let days = total_secs / SECS_IN_DAY;
+    let hours = (total_secs % SECS_IN_DAY) / SECS_IN_HOUR;
+    let mins = (total_secs % SECS_IN_HOUR) / SECS_IN_MIN;
+    let secs = total_secs % SECS_IN_MIN;
+
+    if days > 0 {
+        format!("{}d {}h", days, hours)
+    } else if hours > 0 {
+        format!("{}h {}m", hours, mins)
+    } else if mins > 0 {
+        format!("{}m {}s", mins, secs)
+    } else {
+        format!("{}s", secs)
+    }
+}

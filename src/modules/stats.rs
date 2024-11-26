@@ -4,15 +4,17 @@ use std::sync::{
     Mutex,
 };
 
+use dashmap::DashMap;
 use num_format::{Locale, ToFormattedString};
-use poise::serenity_prelude::{self as serenity};
-use sqlx::types::chrono;
+use poise::serenity_prelude::{self as serenity, ConnectionStage};
+use sqlx::types::chrono::{self, Utc};
 use tokio::spawn;
 use tokio_schedule::{every, Job};
-use tracing::{debug, error};
+use tracing::error;
 
 use crate::modules::fronters;
 use crate::types::{Context, Data, Error};
+use crate::util;
 
 #[derive(Debug)]
 pub(crate) struct Stats {
@@ -20,16 +22,22 @@ pub(crate) struct Stats {
     pub(crate) cpu_usage: AtomicU32,
     pub(crate) mem_usage: AtomicU64,
     pub(crate) started: chrono::DateTime<chrono::Utc>,
+    pub(crate) shards: DashMap<u32, ShardStats>,
+    pub(crate) total_shards: u32,
+    pub(crate) connected_shards: AtomicU32,
 }
 
 impl Stats {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(total_shards: u32) -> Self {
         Self {
             started: chrono::Utc::now(),
             // TODO: kinda ugly, we're dealing with side-effects here, find a better way
             num_cpus: num_cpus(),
             cpu_usage: AtomicU32::new(0),
             mem_usage: AtomicU64::new(0),
+            shards: DashMap::new(),
+            total_shards,
+            connected_shards: AtomicU32::new(0),
         }
     }
 
@@ -47,6 +55,46 @@ impl Stats {
     }
     pub(crate) fn get_mem_usage(&self) -> u64 {
         self.mem_usage.load(Ordering::SeqCst)
+    }
+
+    pub(crate) fn set_connected_shards(&self, connected_shards: u32) {
+        self.connected_shards
+            .store(connected_shards, Ordering::SeqCst)
+    }
+    pub(crate) fn get_connected_shards(&self) -> u32 {
+        self.connected_shards.load(Ordering::SeqCst)
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct ShardStats {
+    pub(crate) shard_id: u32,
+    pub(crate) restarts: u32,
+    pub(crate) stage: ConnectionStage,
+    pub(crate) ready_at: Option<chrono::DateTime<Utc>>,
+}
+
+impl ShardStats {
+    pub(crate) fn new(shard_id: u32, stage: ConnectionStage) -> Self {
+        // if created while already connected set ready_at to now
+        let ready_at = if stage == ConnectionStage::Connected {
+            Some(chrono::Utc::now())
+        } else {
+            None
+        };
+
+        Self {
+            shard_id,
+            restarts: 0,
+            stage,
+            ready_at,
+        }
+    }
+
+    pub(crate) async fn latency(&self, ctx: Context<'_>) -> Option<u128> {
+        let runners = ctx.framework().shard_manager.runners.lock().await;
+        let opt_shard = runners.get(&serenity::ShardId(self.shard_id));
+        opt_shard.and_then(|s| s.latency).map(|l| l.as_millis())
     }
 }
 
@@ -89,21 +137,15 @@ pub(crate) async fn stats(ctx: Context<'_>) -> Result<(), Error> {
     let msg = ctx.reply("...").await?;
     let time_after = chrono::Utc::now().timestamp_millis();
     let api_latency = time_after - time_before;
-    let (shard_id, shard_latency) = {
-        // Shard 0 is the shard used for DMs
-        let shard_id = ctx.guild_id().map(|g| g.shard_id(ctx.cache())).unwrap_or(0);
-        let shard_runners = ctx.framework().shard_manager.runners.lock().await;
-        let opt_shard = shard_runners.get(&serenity::ShardId(shard_id)).clone();
-
-        (
-            shard_id,
-            opt_shard.and_then(|s| s.latency).map(|l| l.as_millis()),
-        )
-    };
-
+    let shard_id = ctx.guild_id().map(|g| g.shard_id(ctx.cache())).unwrap_or(0);
     let fronter_systems = fronters::db::get_system_count(&ctx.data().db).await?;
-
     let stats = &ctx.data().stats;
+    let shard_stats = stats.shards.get(&shard_id).ok_or_else(|| {
+        format!(
+            "no shard in shard_stats with id {}, shouldn't happen",
+            shard_id
+        )
+    })?;
     let mem_usage_mb = stats.get_mem_usage() as f64 / 1024. / 1024.;
 
     let embed = serenity::CreateEmbed::new()
@@ -123,16 +165,36 @@ pub(crate) async fn stats(ctx: Context<'_>) -> Result<(), Error> {
             true,
         )
         .field("Servers", format!("{}", ctx.cache().guilds().len()), true)
-        .field("Current shard", format!("Shard #{}", shard_id), true)
+        .field(
+            "Current Shard",
+            format!("Shard #{} (of {} total, {} are up)", shard_stats.shard_id, stats.total_shards, stats.get_connected_shards()),
+            true,
+        )
+        .field(
+            "Shard Uptime",
+            format!("{} ({} disconnections)",
+            util::format_significant_duration(
+                shard_stats
+                    .ready_at
+                    .expect("ready at was None for current shard which should be impossible as we couldn't respond to this command otherwise")
+                    .signed_duration_since(Utc::now())
+                    .num_seconds()
+                    .unsigned_abs()
+            ), shard_stats.restarts),
+            true,
+        )
         .field(
             "Latency",
             format!(
                 "API: {} ms, Shard: {}",
                 api_latency,
-                shard_latency.map_or("N/A".into(), |f| format!(
-                    "{} ms",
-                    f.to_formatted_string(&Locale::en)
-                ))
+                shard_stats
+                    .latency(ctx)
+                    .await
+                    .map_or("N/A".into(), |f| format!(
+                        "{} ms",
+                        f.to_formatted_string(&Locale::en)
+                    ))
             ),
             true,
         )

@@ -9,10 +9,10 @@ pub(crate) struct Data {
 }
 
 impl Data {
-    pub(crate) fn new(db: sqlx::PgPool) -> Self {
+    pub(crate) fn new(db: sqlx::PgPool, total_shards: u32) -> Self {
         Self {
             db,
-            stats: stats::Stats::new(),
+            stats: stats::Stats::new(total_shards),
         }
     }
 }
