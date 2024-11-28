@@ -230,8 +230,47 @@ pub(crate) async fn stats(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
+#[poise::command(slash_command)]
+pub(crate) async fn shards(ctx: Context<'_>) -> Result<(), Error> {
+    let stats = &ctx.data().stats;
+
+    let mut fields: Vec<(String, String, bool)> = Vec::new();
+    for shard in stats.shards.iter() {
+        fields.push((
+            format!("Shard #{}", shard.shard_id),
+            format!(
+                "Latency: {} / Uptime: {} / Disconnects: {}",
+                shard.latency(ctx).await.map_or("N/A".into(), |f| format!(
+                    "{} ms",
+                    f.to_formatted_string(&Locale::en)
+                )),
+                util::format_significant_duration(
+                    shard
+                        .ready_at
+                        .unwrap_or(Utc::now())
+                        .signed_duration_since(Utc::now())
+                        .num_seconds()
+                        .unsigned_abs(),
+                ),
+                shard.restarts,
+            ),
+            false,
+        ));
+    }
+    fields.sort();
+
+    let embed = serenity::CreateEmbed::new()
+        .title("DMServ Shard Stats")
+        .fields(fields);
+
+    let reply = poise::CreateReply::default().content("").embed(embed);
+    ctx.send(reply).await?;
+
+    Ok(())
+}
+
 pub(crate) fn commands() -> Vec<poise::Command<Arc<Data>, Error>> {
-    vec![stats()]
+    vec![stats(), shards()]
 }
 
 pub(crate) fn start_tasks(ctx: serenity::Context, data: Arc<Data>) {
