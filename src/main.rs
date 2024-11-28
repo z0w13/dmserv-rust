@@ -71,9 +71,6 @@ async fn main() {
                 debug!("finished executing command /{}", ctx.invoked_command_name());
             })
         },
-        event_handler: |ctx, evt, framework, data| {
-            Box::pin(events::handler(ctx, evt, framework, data))
-        },
 
         // registere module commands
         commands: vec![
@@ -88,15 +85,31 @@ async fn main() {
         ..Default::default()
     };
 
+    let data = Arc::new(Data::new(db));
+    let handler = events::EventHandler { data: data.clone() };
+
     let framework = poise::Framework::builder()
         .options(options)
-        // ran on initial connection
-        .setup(|ctx, ready, framework| {
+        // ran on initial connection, also only fires once, unlike FullEvent::Ready
+        .setup(|ctx, data_about_bot, framework| {
             Box::pin(async move {
-                poise::builtins::register_globally(ctx, &framework.options().commands).await?;
+                info!(
+                    user_id = data_about_bot.user.id.get(),
+                    shard = ?data_about_bot.shard,
+                    "connected to discord as '{}{}'",
+                    data_about_bot.user.name,
+                    data_about_bot
+                        .user
+                        .discriminator
+                        .map_or("".into(), |d| format!("#{}", d)),
+                );
                 // TODO: figure out if shard total can change during runtime,
                 //       if so figure out how to handle it
-                let data = Arc::new(Data::new(db, ready.shard.unwrap().total));
+                data.stats
+                    .set_total_shards(data_about_bot.shard.unwrap().total);
+
+                // register commands
+                poise::builtins::register_globally(ctx, &framework.options().commands).await?;
 
                 // register module tasks
                 modules::stats::start_tasks(ctx.to_owned(), data.clone());
@@ -108,6 +121,7 @@ async fn main() {
         .build();
 
     let client = serenity::ClientBuilder::new(config.bot.token, intents)
+        .event_handler(handler)
         .framework(framework)
         .await;
 

@@ -23,12 +23,12 @@ pub(crate) struct Stats {
     pub(crate) mem_usage: AtomicU64,
     pub(crate) started: chrono::DateTime<chrono::Utc>,
     pub(crate) shards: DashMap<u32, ShardStats>,
-    pub(crate) total_shards: u32,
+    pub(crate) total_shards: AtomicU32,
     pub(crate) connected_shards: AtomicU32,
 }
 
 impl Stats {
-    pub(crate) fn new(total_shards: u32) -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             started: chrono::Utc::now(),
             // TODO: kinda ugly, we're dealing with side-effects here, find a better way
@@ -36,9 +36,17 @@ impl Stats {
             cpu_usage: AtomicU32::new(0),
             mem_usage: AtomicU64::new(0),
             shards: DashMap::new(),
-            total_shards,
+            total_shards: AtomicU32::new(0),
             connected_shards: AtomicU32::new(0),
         }
+    }
+
+    pub(crate) fn set_total_shards(&self, shards: u32) {
+        self.total_shards.store(shards, Ordering::SeqCst);
+    }
+
+    pub(crate) fn get_total_shards(&self) -> u32 {
+        self.total_shards.load(Ordering::SeqCst)
     }
 
     pub(crate) fn set_cpu_usage(&self, cpu_usage: f32) {
@@ -57,10 +65,15 @@ impl Stats {
         self.mem_usage.load(Ordering::SeqCst)
     }
 
-    pub(crate) fn set_connected_shards(&self, connected_shards: u32) {
+    pub(crate) fn inc_connected_shards(&self) {
         self.connected_shards
-            .store(connected_shards, Ordering::SeqCst)
+            .store(self.get_connected_shards() + 1, Ordering::SeqCst);
     }
+    pub(crate) fn dec_connected_shards(&self) {
+        self.connected_shards
+            .store(self.get_connected_shards() - 1, Ordering::SeqCst);
+    }
+
     pub(crate) fn get_connected_shards(&self) -> u32 {
         self.connected_shards.load(Ordering::SeqCst)
     }
@@ -167,7 +180,7 @@ pub(crate) async fn stats(ctx: Context<'_>) -> Result<(), Error> {
         .field("Servers", format!("{}", ctx.cache().guilds().len()), true)
         .field(
             "Current Shard",
-            format!("Shard #{} (of {} total, {} are up)", shard_stats.shard_id, stats.total_shards, stats.get_connected_shards()),
+            format!("Shard #{} (of {} total, {} are up)", shard_stats.shard_id, stats.get_total_shards(), stats.get_connected_shards()),
             true,
         )
         .field(
