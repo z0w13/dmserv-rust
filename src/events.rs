@@ -42,6 +42,9 @@ impl serenity::EventHandler for EventHandler {
 
         let mut shard_stats = self.data.stats.shards.get_mut(&shard_id).unwrap();
 
+        // NOTE: shard_stage_update doesn't always get triggered
+        //       Resuming -> Connected does seem consistent,
+        //       but we need to keep this in mind when updating connected_shards
         shard_stats.stage = event.new;
         if event.old == serenity::ConnectionStage::Connected {
             // we are no longer connected to reset ready timestamp and add a restart
@@ -49,8 +52,13 @@ impl serenity::EventHandler for EventHandler {
             shard_stats.restarts += 1;
             self.data.stats.dec_connected_shards();
         } else if event.new == serenity::ConnectionStage::Connected {
+            // only increment connected_shards if we previously registered
+            // that we weren't connected, see above note
+            if shard_stats.ready_at.is_none() {
+                self.data.stats.inc_connected_shards();
+            }
+
             shard_stats.ready_at = Some(chrono::Utc::now());
-            self.data.stats.inc_connected_shards();
         }
     }
 }
