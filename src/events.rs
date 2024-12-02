@@ -24,16 +24,21 @@ impl serenity::EventHandler for EventHandler {
                 .map_or("".into(), |d| format!("#{}", d)),
         );
     }
+
+    // NOTE: shard_stage_update doesn't always get triggered
+    //       Resuming -> Connected does seem consistent,
+    //       keep this in mind when updating connected_shards and restarts
     async fn shard_stage_update(
         &self,
         _ctx: serenity::Context,
         event: serenity::ShardStageUpdateEvent,
     ) {
         let shard_id = event.shard_id.get();
+        let new_shard = !self.data.stats.shards.contains_key(&shard_id);
         debug!(shard_id = shard_id, old = ?event.old, new = ?event.new);
 
         // create the shard stats if missing
-        if !self.data.stats.shards.contains_key(&shard_id) {
+        if new_shard {
             self.data
                 .stats
                 .shards
@@ -42,22 +47,22 @@ impl serenity::EventHandler for EventHandler {
 
         let mut shard_stats = self.data.stats.shards.get_mut(&shard_id).unwrap();
 
-        // NOTE: shard_stage_update doesn't always get triggered
-        //       Resuming -> Connected does seem consistent,
-        //       but we need to keep this in mind when updating connected_shards
         shard_stats.stage = event.new;
         if event.old == serenity::ConnectionStage::Connected {
-            // we are no longer connected to reset ready timestamp and add a restart
+            // we are no longer connected so reset ready timestamp
             shard_stats.ready_at = None;
-            shard_stats.restarts += 1;
             self.data.stats.dec_connected_shards();
         } else if event.new == serenity::ConnectionStage::Connected {
             // only increment connected_shards if we previously registered
             // that we weren't connected, see above note
-            if shard_stats.ready_at.is_none() {
+            if shard_stats.ready_at.is_none() || new_shard {
                 self.data.stats.inc_connected_shards();
             }
 
+            // Don't add a restart if this is a newly added shard
+            if !new_shard {
+                shard_stats.restarts += 1;
+            }
             shard_stats.ready_at = Some(chrono::Utc::now());
         }
     }
