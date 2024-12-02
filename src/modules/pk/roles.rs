@@ -1,13 +1,12 @@
 use core::panic;
 use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
 
 use pkrs::model::PkId;
 use poise::serenity_prelude::{self as serenity, PartialGuild};
 use tracing::debug;
 
-use super::pk::db::get_guild_settings_for_id;
-use crate::types::{Context, Data, Error};
+use super::db::get_guild_settings_for_id;
+use crate::types::{Context, Error};
 use crate::util::{get_member_name, hex_to_color};
 
 #[derive(Debug, Hash, Eq, PartialEq)]
@@ -192,8 +191,4 @@ pub(crate) async fn update_member_roles(ctx: Context<'_>) -> Result<(), Error> {
     ))
     .await?;
     Ok(())
-}
-
-pub(crate) fn commands() -> Vec<poise::Command<Arc<Data>, Error>> {
-    vec![update_member_roles()]
 }

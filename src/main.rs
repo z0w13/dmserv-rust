@@ -73,15 +73,10 @@ async fn main() {
         },
 
         // registere module commands
-        commands: vec![
-            modules::fronters::commands(),
-            modules::roles::commands(),
-            modules::pk::commands(),
-            modules::stats::commands(),
-        ]
-        .into_iter()
-        .flatten()
-        .collect(),
+        commands: vec![modules::pk::commands(), modules::stats::commands()]
+            .into_iter()
+            .flatten()
+            .collect(),
         ..Default::default()
     };
 
@@ -113,7 +108,7 @@ async fn main() {
 
                 // register module tasks
                 modules::stats::start_tasks(ctx.to_owned(), data.clone());
-                modules::fronters::start_tasks(ctx.to_owned(), data.clone());
+                modules::pk::start_tasks(ctx.to_owned(), data.clone());
 
                 Ok(data.clone())
             })

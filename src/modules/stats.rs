@@ -12,7 +12,7 @@ use tokio::spawn;
 use tokio_schedule::{every, Job};
 use tracing::error;
 
-use crate::modules::fronters;
+use crate::modules::pk;
 use crate::types::{Context, Data, Error};
 use crate::util;
 
@@ -151,7 +151,7 @@ pub(crate) async fn stats(ctx: Context<'_>) -> Result<(), Error> {
     let time_after = chrono::Utc::now().timestamp_millis();
     let api_latency = time_after - time_before;
     let shard_id = ctx.guild_id().map(|g| g.shard_id(ctx.cache())).unwrap_or(0);
-    let fronter_systems = fronters::db::get_system_count(&ctx.data().db).await?;
+    let fronter_systems = pk::fronters::db::get_system_count(&ctx.data().db).await?;
     let stats = &ctx.data().stats;
     let shard_stats = stats.shards.get(&shard_id).ok_or_else(|| {
         format!(

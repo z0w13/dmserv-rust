@@ -5,7 +5,7 @@ use poise::serenity_prelude::{self as serenity, CacheHttp};
 use serde_either::StringOrStruct;
 use tracing::error;
 
-use crate::modules::fronters::db;
+use super::db;
 use crate::modules::pk::db::{get_guild_settings_for_id, ModPkGuildRow};
 use crate::types::{Context, Error};
 use crate::util::get_member_name;

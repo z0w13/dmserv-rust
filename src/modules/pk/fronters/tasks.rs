@@ -3,7 +3,7 @@ use std::sync::Arc;
 use poise::serenity_prelude::{self as serenity};
 use tracing::{error, info, warn};
 
-use crate::modules::{fronters, pk};
+use crate::modules::pk;
 use crate::types::{Data, Error};
 
 use self::pk::db::ModPkGuildRow;
@@ -11,7 +11,7 @@ use self::pk::db::ModPkGuildRow;
 use super::db::ModPkFrontersRow;
 
 pub(crate) async fn update_fronters(ctx: &serenity::Context, data: Arc<Data>) -> Result<(), Error> {
-    let fronter_cats = fronters::db::get_fronter_categories(&data.db).await?;
+    let fronter_cats = super::db::get_fronter_categories(&data.db).await?;
     let guild_settings = pk::db::get_guild_settings(&data.db).await?;
 
     for cat in fronter_cats {
@@ -57,7 +57,7 @@ async fn update_fronters_for_guild(
             cat.category_id, guild.name, guild.id
         ))?;
 
-    fronters::commands::update_fronter_channels(ctx, guild.clone(), gs, cat)
+    super::commands::update_fronter_channels(ctx, guild.clone(), gs, cat)
         .await
         .map_err(|err| {
             format!(
