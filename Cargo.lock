@@ -529,6 +529,7 @@ dependencies = [
  "num-format",
  "pkrs",
  "poise",
+ "regex",
  "serde",
  "serde-envfile",
  "serde_either",

@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO mod_emoji_emoji_uses (\n                guild_id,\n                emoji_id,\n                name,\n                animated,\n                created_at\n            ) VALUES ($1, $2, $3, $4, $5)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Varchar",
+        "Bool",
+        "Timestamp"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f123a5fb32baf556fa9be38b7539710d942833799c38e25c8170b9a2c5ee9376"
+}

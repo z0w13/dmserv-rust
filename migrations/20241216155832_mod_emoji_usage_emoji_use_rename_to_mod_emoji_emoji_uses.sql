@@ -1,0 +1,1 @@
+ALTER TABLE mod_emoji_usage_emoji_use RENAME TO mod_emoji_emoji_uses;

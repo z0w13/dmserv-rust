@@ -73,15 +73,20 @@ async fn main() {
         },
 
         // registere module commands
-        commands: vec![modules::pk::commands(), modules::stats::commands()]
-            .into_iter()
-            .flatten()
-            .collect(),
+        commands: vec![
+            modules::pk::commands(),
+            modules::stats::commands(),
+            modules::emoji::commands(),
+        ]
+        .into_iter()
+        .flatten()
+        .collect(),
         ..Default::default()
     };
 
     let data = Arc::new(Data::new(db));
     let handler = events::EventHandler { data: data.clone() };
+    let event_handler_emoji = modules::emoji::event_handler::EventHandler { data: data.clone() };
 
     let framework = poise::Framework::builder()
         .options(options)
@@ -129,8 +134,17 @@ async fn main() {
         })
         .build();
 
+    // INFO: cache the last 200 messages in each channel
+    //       this is required for old/new message on FullEvent::MessageUpdate
+    //       and is based on the discord.js defaults
+    //       (see: DefaultMakeCacheSettings in discord.js)
+    let mut cache_settings = serenity::cache::Settings::default();
+    cache_settings.max_messages = 200;
+
     let client = serenity::ClientBuilder::new(config.bot.token, intents)
+        .cache_settings(cache_settings)
         .event_handler(handler)
+        .event_handler(event_handler_emoji)
         .framework(framework)
         .await;
 
