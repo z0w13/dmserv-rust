@@ -106,6 +106,20 @@ async fn main() {
                 // register commands
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
 
+                // set presence to version
+                ctx.set_presence(
+                    Some(serenity::ActivityData::custom(format!(
+                        " Version: {} ({}{})",
+                        env!("CARGO_PKG_VERSION"),
+                        env!("VERGEN_GIT_SHA"),
+                        match env!("VERGEN_GIT_DIRTY") {
+                            "true" => "-dirty",
+                            _ => "",
+                        }
+                    ))),
+                    serenity::OnlineStatus::Online,
+                );
+
                 // register module tasks
                 modules::stats::start_tasks(ctx.to_owned(), data.clone());
                 modules::pk::start_tasks(ctx.to_owned(), data.clone());
