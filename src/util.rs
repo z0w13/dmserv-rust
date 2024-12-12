@@ -38,3 +38,29 @@ pub(crate) fn format_significant_duration(total_secs: u64) -> String {
         format!("{}s", secs)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hex_to_color_test() {
+        assert_eq!(
+            hex_to_color(Some("#EEEEEE".to_string())),
+            serenity::Colour::new(15658734)
+        );
+        assert_eq!(
+            hex_to_color(Some("unparseable".to_string())),
+            serenity::colours::roles::DEFAULT
+        );
+        assert_eq!(hex_to_color(None), serenity::colours::roles::DEFAULT);
+    }
+
+    #[test]
+    fn format_significant_duration_test() {
+        assert_eq!(format_significant_duration(2 * 86_400 + 4 * 3_600), "2d 4h");
+        assert_eq!(format_significant_duration(5 * 3_600 + 5 * 60 + 5), "5h 5m");
+        assert_eq!(format_significant_duration(20 * 60 + 1), "20m 1s");
+        assert_eq!(format_significant_duration(0), "0s");
+    }
+}
