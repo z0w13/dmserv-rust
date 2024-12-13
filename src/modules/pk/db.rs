@@ -3,6 +3,7 @@ use crate::types::Error;
 #[derive(Debug)]
 pub(crate) struct ModPkGuildRow {
     pub(crate) guild_id: i64,
+    #[allow(dead_code)]
     pub(crate) user_id: i64,
     pub(crate) system_id: String,
     pub(crate) token: Option<String>,
