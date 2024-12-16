@@ -8,5 +8,8 @@ pub(crate) mod event_handler;
 pub(crate) mod shared;
 
 pub(crate) fn commands() -> Vec<poise::Command<Arc<Data>, Error>> {
-    vec![commands::emoji_stats::command()]
+    vec![
+        commands::emoji_stats::command(),
+        commands::emoji_clone::command(),
+    ]
 }
