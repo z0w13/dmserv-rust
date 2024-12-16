@@ -49,6 +49,10 @@ pub(crate) async fn command(
         .await?;
 
         return Ok(());
+    } else if emojis.len() > 10 {
+        ctx.reply("**ERROR:** can't add more than 10 emotes at once")
+            .await?;
+        return Ok(());
     } else {
         // add multiple emotes
         let prefix = prefix.unwrap_or("".into());
