@@ -29,6 +29,9 @@ pub(crate) async fn command(
         return Ok(());
     }
 
+    // defer response, we might take a while
+    ctx.defer().await?;
+
     if let Some(new_name) = new_name {
         // add single emote with new_name
         if emojis.len() > 1 {
