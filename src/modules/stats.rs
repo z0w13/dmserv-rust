@@ -162,8 +162,8 @@ pub(crate) async fn stats(ctx: Context<'_>) -> Result<(), Error> {
     let mem_usage_mb = stats.get_mem_usage() as f64 / 1024. / 1024.;
 
     let embed = serenity::CreateEmbed::new()
-        .title("DMServ Discord Bot")
-        .url("https://github.com/z0w13/dmserv-rust")
+        .title("Tulpje Discord Bot")
+        .url("https://github.com/z0w13/tulpje")
         .field(
             "Version",
             format!(
@@ -219,7 +219,7 @@ pub(crate) async fn stats(ctx: Context<'_>) -> Result<(), Error> {
             true,
         )
         .footer(serenity::CreateEmbedFooter::new(
-            "DMServ • https://github.com/z0w13/dmserv-rust • Last Restarted:",
+            "Tulpje • https://github.com/z0w13/tulpje • Last Restarted:",
         ))
         .timestamp(stats.started);
 
@@ -260,7 +260,7 @@ pub(crate) async fn shards(ctx: Context<'_>) -> Result<(), Error> {
     fields.sort();
 
     let embed = serenity::CreateEmbed::new()
-        .title("DMServ Shard Stats")
+        .title("Tulpje Shard Stats")
         .fields(fields);
 
     let reply = poise::CreateReply::default().content("").embed(embed);

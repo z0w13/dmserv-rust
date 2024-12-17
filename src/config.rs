@@ -20,7 +20,7 @@ pub(crate) struct Config {
 }
 
 pub(crate) fn load_config() -> Result<Config, Error> {
-    let bot: BotConfig = serde_envfile::prefixed("DMSERV_").from_file(&PathBuf::from(".env"))?;
+    let bot: BotConfig = serde_envfile::prefixed("TULPJE_").from_file(&PathBuf::from(".env"))?;
     let db: DatabaseConfig =
         serde_envfile::prefixed("DATABASE_").from_file(&PathBuf::from(".env"))?;
 

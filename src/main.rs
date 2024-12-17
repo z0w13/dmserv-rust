@@ -24,7 +24,7 @@ async fn main() {
     // set-up logging
     tracing_subscriber::fmt::init();
 
-    info!("Starting DMServ ...");
+    info!("Starting Tulpje ...");
     info!(" [-] Version:  {}", env!("CARGO_PKG_VERSION"));
     info!(
         " [-] Commit:   {}{}",
